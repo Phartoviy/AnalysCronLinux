@@ -100,9 +100,30 @@ int main(int argc, char *argv[])
         currentChanges[pathFile] = cronElement;
     }
     auto listState = readFromFile("state_cron.dat");
-    //writeToFile("state_cron.dat",currentChanges);
+    std::unordered_map<std::string, CronChange> tempChanges = currentChanges;
+    for (auto &&[key,change]: currentChanges)
+    {
+        if (listState.find(key) != listState.end()){
+            std::cout << std::string(10,'#') << timeToString(std::time(nullptr)) << std::string(10,'#') << std::endl;
+            if (listState[key].size_file != change.size_file)
+                std::cout << "[Warning] Изменен размер cron файла " << change.pathToFile << " - нарушение целостности!" << std::endl;
+            if (listState[key].timestamp != change.timestamp)
+                std::cout << "[Warning] Файл cron был изменен " << change.pathToFile << " - нарушение целостности!" << std::endl;
 
-
-
+            if (listState[key].mode_file != change.mode_file)
+                std::cout << "[Critical] Изменены права доступа cron файла " << change.pathToFile << " - подозрительные изменения!" << std::endl;
+            if (listState[key].id_userOwner != change.id_userOwner)
+                std::cout << "[Critical] Изменен владелец cron файла " << change.pathToFile << " - подозрительные изменения!" << std::endl;
+            tempChanges.erase(key);
+        }
+    }
+    if (!tempChanges.empty())
+    {
+        for (auto &&[key,change]: tempChanges)
+        {
+           std::cout << "[Information] Добавлен новый cron файл " << change.pathToFile << std::endl;
+        }
+    }
+    writeToFile("state_cron.dat",currentChanges);
     return 0;
 }
